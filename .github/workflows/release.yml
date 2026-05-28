@@ -100,3 +100,67 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:latest
 
+  publish-smithery:
+    name: Publish MCPB to Smithery
+    needs: [publish-cratesio, build-binaries]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: x86_64-unknown-linux-gnu
+
+      - name: Build binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+
+      - name: Package MCPB bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p .mcpb/bin
+          cp "target/x86_64-unknown-linux-gnu/release/passit" .mcpb/bin/
+
+          cat > .mcpb/manifest.json << JSONEOF
+          {
+            "id": "passit",
+            "name": "passit",
+            "version": "${VERSION}",
+            "description": "Pass conversations between AI agents — grab, drop, and continue seamlessly",
+            "author": "himanshu007-creator",
+            "homepage": "https://github.com/himanshu007-creator/passit",
+            "entrypoint": {
+              "command": "passit",
+              "args": [],
+              "transport": "stdio"
+            },
+            "platforms": ["linux"],
+            "permissions": ["filesystem:read", "filesystem:write"],
+            "config": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agentId": {
+                    "type": "string",
+                    "default": "opencode",
+                    "description": "Identifier for this agent instance (e.g. claude-code, opencode)"
+                  }
+                }
+              }
+            }
+          }
+          JSONEOF
+
+          cd .mcpb && tar czf ../passit.mcpb .
+
+      - name: Publish to Smithery
+        env:
+          SMITHERY_KEY: ${{ secrets.SMITHERY_KEY }}
+        run: |
+          if [ -z "${SMITHERY_KEY}" ]; then
+            echo "SMITHERY_KEY not set — skipping Smithery publish"
+            exit 0
+          fi
+          npx -y @anthropic-ai/mcpb publish passit.mcpb --key "${SMITHERY_KEY}"
+
