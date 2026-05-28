@@ -162,5 +162,5 @@ jobs:
             echo "SMITHERY_KEY not set — skipping Smithery publish"
             exit 0
           fi
-          npx -y @anthropic-ai/mcpb publish passit.mcpb --key "${SMITHERY_KEY}"
+          npx -y @smithery/cli@latest mcp publish passit.mcpb -n himanshu007-creator/passit
 
