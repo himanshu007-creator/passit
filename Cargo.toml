@@ -8,7 +8,7 @@ authors = ["himanshu007-creator"]
 homepage = "https://github.com/himanshu007-creator/passit"
 repository = "https://github.com/himanshu007-creator/passit"
 readme = "README.md"
-keywords = ["mcp", "session", "agent", "ai", "claude-code", "opencode", "continuity"]
+keywords = ["mcp", "session", "agent", "ai", "continuity"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
