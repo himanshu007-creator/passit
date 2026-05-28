@@ -1,0 +1,17 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "topFilesLength": 10
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "customPatterns": [
+      "Cargo.lock",
+      "repomix-output.xml"
+    ]
+  }
+}

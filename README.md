@@ -23,7 +23,7 @@ passit is a local-first [MCP](https://modelcontextprotocol.io) server that lets 
 cargo install passit
 ```
 
-## Why?
+## Why passit?
 
 AI coding agents are walled gardens. Claude Code can't see what OpenCode discussed. Cursor can't pick up from Gemini. If one agent hits its limit, there's no way to continue elsewhere without copy-pasting.
 
@@ -102,7 +102,7 @@ Each agent needs an MCP server entry pointing to `passit`.
 }
 ```
 
-### 3. Use it
+### 3. Use passit
 
 Just talk naturally. The agent picks up what you mean:
 
@@ -116,7 +116,9 @@ Just talk naturally. The agent picks up what you mean:
 
 > "push this session to gemini"
 
-## Tools
+## MCP Tools
+
+passit exposes these MCP tools to your AI agent:
 
 | Tool | What it does | Say this |
 |------|-------------|---------|
@@ -156,7 +158,7 @@ passit export <session-id>
 | `PASSIT_AGENT_ID` | `opencode` | Agent identifier |
 | `PASSIT_LOG_LEVEL` | `info` | Log level |
 
-## How It Works
+## How passit Works
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
