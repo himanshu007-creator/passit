@@ -21,6 +21,9 @@ jobs:
         with:
           components: clippy
 
+      - name: Format
+        run: cargo fmt --check
+
       - name: Build
         run: cargo build --all-targets --verbose
 

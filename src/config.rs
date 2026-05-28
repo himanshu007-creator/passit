@@ -75,8 +75,7 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(300),
-            llm_summary_enabled: std::env::var("PASSIT_LLM_SUMMARY")
-                .is_ok_and(|v| v == "true"),
+            llm_summary_enabled: std::env::var("PASSIT_LLM_SUMMARY").is_ok_and(|v| v == "true"),
         }
     }
 }

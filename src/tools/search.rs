@@ -1,5 +1,5 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

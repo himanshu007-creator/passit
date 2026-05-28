@@ -115,9 +115,11 @@ impl Database {
         )?;
 
         // Tolerant column additions (ok if already exist)
-        let _ = conn.execute_batch("ALTER TABLE sessions ADD COLUMN times_loaded INTEGER DEFAULT 0");
+        let _ =
+            conn.execute_batch("ALTER TABLE sessions ADD COLUMN times_loaded INTEGER DEFAULT 0");
         let _ = conn.execute_batch("ALTER TABLE sessions ADD COLUMN last_loaded_by TEXT");
-        let _ = conn.execute_batch("ALTER TABLE transfer_events ADD COLUMN tokens_saved INTEGER DEFAULT 0");
+        let _ = conn
+            .execute_batch("ALTER TABLE transfer_events ADD COLUMN tokens_saved INTEGER DEFAULT 0");
 
         Ok(())
     }

@@ -1,5 +1,5 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -37,7 +37,9 @@ pub async fn convert_session(
 ) -> Result<CallToolResult, ErrorData> {
     let session = get_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
-        .ok_or_else(|| ErrorData::internal_error(format!("Session not found: {}", params.session_id), None))?;
+        .ok_or_else(|| {
+            ErrorData::internal_error(format!("Session not found: {}", params.session_id), None)
+        })?;
 
     let mut messages = get_messages_by_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
@@ -52,57 +54,117 @@ pub async fn convert_session(
 
     let (output, tokens_saved, compression_pct) = match format {
         "openai" => {
-            let arr: Vec<serde_json::Value> = messages.iter().map(|m| {
-                serde_json::json!({
-                    "role": m.role,
-                    "content": m.content,
+            let arr: Vec<serde_json::Value> = messages
+                .iter()
+                .map(|m| {
+                    serde_json::json!({
+                        "role": m.role,
+                        "content": m.content,
+                    })
                 })
-            }).collect();
+                .collect();
             (serde_json::Value::Array(arr), None, None)
         }
         "anthropic" => {
-            let arr: Vec<serde_json::Value> = messages.iter().map(|m| {
-                let role = if m.role == "assistant" { "assistant" } else { "user" };
-                serde_json::json!({
-                    "role": role,
-                    "content": [{"type": "text", "text": m.content}],
+            let arr: Vec<serde_json::Value> = messages
+                .iter()
+                .map(|m| {
+                    let role = if m.role == "assistant" {
+                        "assistant"
+                    } else {
+                        "user"
+                    };
+                    serde_json::json!({
+                        "role": role,
+                        "content": [{"type": "text", "text": m.content}],
+                    })
                 })
-            }).collect();
+                .collect();
             (serde_json::Value::Array(arr), None, None)
         }
         "messages" => {
-            let arr: Vec<serde_json::Value> = messages.iter().map(|m| {
-                serde_json::json!({
-                    "turn_index": m.turn_index,
-                    "role": m.role,
-                    "content": m.content,
-                    "agent_id": m.agent_id,
-                    "model": m.model,
+            let arr: Vec<serde_json::Value> = messages
+                .iter()
+                .map(|m| {
+                    serde_json::json!({
+                        "turn_index": m.turn_index,
+                        "role": m.role,
+                        "content": m.content,
+                        "agent_id": m.agent_id,
+                        "model": m.model,
+                    })
                 })
-            }).collect();
+                .collect();
             (serde_json::Value::Array(arr), None, None)
         }
         "handoff" => {
-            let handoff = format_handoff(&session, &messages, 0, 0, Some(db), &params.session_id, 2000);
+            let handoff = format_handoff(
+                &session,
+                &messages,
+                0,
+                0,
+                Some(db),
+                &params.session_id,
+                2000,
+            );
             let handoff_tokens = handoff.len() / 4;
             let saved = full_tokens.saturating_sub(handoff_tokens) as i64;
-            let pct = if full_tokens > 0 { (saved as f64 / full_tokens as f64 * 100.0) as i64 } else { 0 };
-            (serde_json::json!({"handoff": handoff, "tokens_saved": saved, "compression_pct": pct}), Some(saved), Some(pct))
+            let pct = if full_tokens > 0 {
+                (saved as f64 / full_tokens as f64 * 100.0) as i64
+            } else {
+                0
+            };
+            (
+                serde_json::json!({"handoff": handoff, "tokens_saved": saved, "compression_pct": pct}),
+                Some(saved),
+                Some(pct),
+            )
         }
         "compact" => {
-            let compact = format_compact(&session, &messages, 0, 0, Some(db), &params.session_id, 2000);
+            let compact = format_compact(
+                &session,
+                &messages,
+                0,
+                0,
+                Some(db),
+                &params.session_id,
+                2000,
+            );
             let compact_tokens = compact.len() / 4;
             let saved = full_tokens.saturating_sub(compact_tokens) as i64;
-            let pct = if full_tokens > 0 { (saved as f64 / full_tokens as f64 * 100.0) as i64 } else { 0 };
-            (serde_json::json!({"compact": compact, "tokens_saved": saved, "compression_pct": pct}), Some(saved), Some(pct))
+            let pct = if full_tokens > 0 {
+                (saved as f64 / full_tokens as f64 * 100.0) as i64
+            } else {
+                0
+            };
+            (
+                serde_json::json!({"compact": compact, "tokens_saved": saved, "compression_pct": pct}),
+                Some(saved),
+                Some(pct),
+            )
         }
         _ => {
             // briefing (default)
-            let briefing = format_briefing(&session, &messages, Some(db), &params.session_id, 2000, 1000);
+            let briefing = format_briefing(
+                &session,
+                &messages,
+                Some(db),
+                &params.session_id,
+                2000,
+                1000,
+            );
             let briefing_tokens = briefing.len() / 4;
             let saved = full_tokens.saturating_sub(briefing_tokens) as i64;
-            let pct = if full_tokens > 0 { (saved as f64 / full_tokens as f64 * 100.0) as i64 } else { 0 };
-            (serde_json::json!({"briefing": briefing, "tokens_saved": saved, "compression_pct": pct}), Some(saved), Some(pct))
+            let pct = if full_tokens > 0 {
+                (saved as f64 / full_tokens as f64 * 100.0) as i64
+            } else {
+                0
+            };
+            (
+                serde_json::json!({"briefing": briefing, "tokens_saved": saved, "compression_pct": pct}),
+                Some(saved),
+                Some(pct),
+            )
         }
     };
 

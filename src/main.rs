@@ -88,7 +88,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let cfg = config::Config::from_env();
             server::run_mcp_server(cfg).await?;
         }
-        Some(Commands::Acp { port, db_path, agent_id }) => {
+        Some(Commands::Acp {
+            port,
+            db_path,
+            agent_id,
+        }) => {
             let mut cfg = config::Config::from_env();
             cfg.enable_acp = true;
             if let Some(p) = db_path {
@@ -104,26 +108,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // Start ACP server in background
             let db_clone = db.clone();
             let acp_cfg = cfg.clone();
-            let acp_handle = tokio::spawn(async move {
-                acp::server::start_acp_server(db_clone, &acp_cfg).await
-            });
+            let acp_handle =
+                tokio::spawn(
+                    async move { acp::server::start_acp_server(db_clone, &acp_cfg).await },
+                );
 
             // Start MCP server on stdio
             server::run_mcp_server(cfg).await?;
 
-            acp_handle.await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)??;
+            acp_handle
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)??;
         }
-        Some(Commands::Export { session_id, format, db_path }) => {
+        Some(Commands::Export {
+            session_id,
+            format,
+            db_path,
+        }) => {
             let db_path = db_path.map(Into::into).unwrap_or_else(|| {
                 let cfg = config::Config::from_env();
                 cfg.db_path
             });
             let db = db::database::Database::open(&db_path)?;
 
-            let result = tools::export_tool::export_session(&db, tools::export_tool::ExportSessionParams {
-                session_id,
-                format: Some(format),
-            })
+            let result = tools::export_tool::export_session(
+                &db,
+                tools::export_tool::ExportSessionParams {
+                    session_id,
+                    format: Some(format),
+                },
+            )
             .await?;
 
             for content in result.content {
@@ -132,22 +146,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 }
             }
         }
-        Some(Commands::List { limit, agent, db_path }) => {
+        Some(Commands::List {
+            limit,
+            agent,
+            db_path,
+        }) => {
             let db_path = db_path.map(Into::into).unwrap_or_else(|| {
                 let cfg = config::Config::from_env();
                 cfg.db_path
             });
             let db = db::database::Database::open(&db_path)?;
 
-            let result = tools::list::list_sessions_tool(&db, tools::list::ListSessionsParams {
-                limit,
-                offset: None,
-                project_path: None,
-                agent,
-                tag: None,
-                since: None,
-                source: None,
-            })
+            let result = tools::list::list_sessions_tool(
+                &db,
+                tools::list::ListSessionsParams {
+                    limit,
+                    offset: None,
+                    project_path: None,
+                    agent,
+                    tag: None,
+                    since: None,
+                    source: None,
+                },
+            )
             .await?;
 
             for content in result.content {
@@ -165,11 +186,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             let summary = history::run_history_scanners(&db);
             println!("History scan complete:");
-            println!("  Total imported: {} sessions ({} messages)", summary.total_sessions, summary.total_messages);
+            println!(
+                "  Total imported: {} sessions ({} messages)",
+                summary.total_sessions, summary.total_messages
+            );
             if verbose {
                 for s in &summary.scanners {
-                    println!("  {}: {} found, {} imported ({} messages)",
-                        s.name, s.sessions_found, s.sessions_imported, s.messages_imported);
+                    println!(
+                        "  {}: {} found, {} imported ({} messages)",
+                        s.name, s.sessions_found, s.sessions_imported, s.messages_imported
+                    );
                 }
             } else {
                 for s in &summary.scanners {

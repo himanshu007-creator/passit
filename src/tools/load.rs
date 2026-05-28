@@ -1,15 +1,15 @@
 use std::fmt;
 
+use rmcp::ErrorData;
 use rmcp::model::{CallToolResult, Content};
 use rmcp::service::{ElicitationMode, Peer, RoleServer};
-use rmcp::ErrorData;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::db::database::Database;
-use crate::db::facts::{get_facts_by_type, FactType};
-use crate::db::messages::{get_messages_by_session, Message};
-use crate::db::sessions::{get_session, increment_load_count, Session};
+use crate::db::facts::{FactType, get_facts_by_type};
+use crate::db::messages::{Message, get_messages_by_session};
+use crate::db::sessions::{Session, get_session, increment_load_count};
 use crate::db::transfers::log_transfer as log_transfer_event;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -76,6 +76,7 @@ pub struct LoadSessionResult {
     pub tokens_saved: Option<i64>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn load_session(
     db: &Database,
     params: LoadSessionParams,
@@ -88,7 +89,9 @@ pub async fn load_session(
 ) -> Result<CallToolResult, ErrorData> {
     let session = get_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
-        .ok_or_else(|| ErrorData::internal_error(format!("Session not found: {}", params.session_id), None))?;
+        .ok_or_else(|| {
+            ErrorData::internal_error(format!("Session not found: {}", params.session_id), None)
+        })?;
 
     let mut messages = get_messages_by_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
@@ -101,9 +104,14 @@ pub async fn load_session(
     let chosen_format: String = if let Some(ref f) = params.format {
         f.clone()
     } else if let Some(peer) = peer {
-        let has_form = peer.supported_elicitation_modes().contains(&ElicitationMode::Form);
+        let has_form = peer
+            .supported_elicitation_modes()
+            .contains(&ElicitationMode::Form);
         if has_form {
-            match peer.elicit::<FormatChoice>("How would you like to load this session?").await {
+            match peer
+                .elicit::<FormatChoice>("How would you like to load this session?")
+                .await
+            {
                 Ok(Some(choice)) => choice.format.to_string(),
                 Ok(None) => {
                     return Ok(CallToolResult::success(vec![Content::text(
@@ -179,7 +187,9 @@ pub async fn load_session(
             messages: Some(msg_json),
             token_estimate: 0,
             truncated,
-            instruction: "Use these messages to restore context. Continue the conversation naturally.".to_string(),
+            instruction:
+                "Use these messages to restore context. Continue the conversation naturally."
+                    .to_string(),
             tokens_saved: None,
         };
 
@@ -198,7 +208,8 @@ pub async fn load_session(
             messages: None,
             token_estimate,
             truncated,
-            instruction: "Full transcript replay. Use this to review the conversation history.".to_string(),
+            instruction: "Full transcript replay. Use this to review the conversation history."
+                .to_string(),
             tokens_saved: None,
         };
 
@@ -208,7 +219,14 @@ pub async fn load_session(
     }
 
     if chosen_format == "briefing" {
-        let briefing = format_briefing(&session, &messages, Some(db), &params.session_id, verbatim_budget, _summary_budget);
+        let briefing = format_briefing(
+            &session,
+            &messages,
+            Some(db),
+            &params.session_id,
+            verbatim_budget,
+            _summary_budget,
+        );
         let token_estimate = briefing.len() / 4;
 
         let result = LoadSessionResult {
@@ -217,7 +235,8 @@ pub async fn load_session(
             messages: None,
             token_estimate,
             truncated,
-            instruction: "Respond directly to the LATEST message. Do not re-analyze history.".to_string(),
+            instruction: "Respond directly to the LATEST message. Do not re-analyze history."
+                .to_string(),
             tokens_saved: None,
         };
 
@@ -228,12 +247,32 @@ pub async fn load_session(
 
     if chosen_format == "compact" {
         let full_tokens = format_transcript(&session, &messages).len() / 4;
-        let dummy = format_compact(&session, &messages, 0, 0, Some(db), &params.session_id, verbatim_budget);
+        let dummy = format_compact(
+            &session,
+            &messages,
+            0,
+            0,
+            Some(db),
+            &params.session_id,
+            verbatim_budget,
+        );
         let compact_tokens = dummy.len() / 4;
         let tokens_saved = full_tokens.saturating_sub(compact_tokens) as i64;
-        let pct = if full_tokens > 0 { (tokens_saved as f64 / full_tokens as f64 * 100.0) as i64 } else { 0 };
+        let pct = if full_tokens > 0 {
+            (tokens_saved as f64 / full_tokens as f64 * 100.0) as i64
+        } else {
+            0
+        };
 
-        let compact = format_compact(&session, &messages, tokens_saved, pct, Some(db), &params.session_id, verbatim_budget);
+        let compact = format_compact(
+            &session,
+            &messages,
+            tokens_saved,
+            pct,
+            Some(db),
+            &params.session_id,
+            verbatim_budget,
+        );
         let compact_len = compact.len() / 4;
 
         let result = LoadSessionResult {
@@ -242,7 +281,8 @@ pub async fn load_session(
             messages: None,
             token_estimate: compact_len,
             truncated,
-            instruction: "[CONTINUE] Respond to last turn directly. No re-analysis, no greeting.".to_string(),
+            instruction: "[CONTINUE] Respond to last turn directly. No re-analysis, no greeting."
+                .to_string(),
             tokens_saved: Some(tokens_saved),
         };
 
@@ -256,7 +296,15 @@ pub async fn load_session(
     let full_tokens = full_transcript.len() / 4;
 
     // Compute tokens_saved first (needed for format_handoff)
-    let dummy_handoff = format_handoff(&session, &messages, 0, 0, Some(db), &params.session_id, verbatim_budget);
+    let dummy_handoff = format_handoff(
+        &session,
+        &messages,
+        0,
+        0,
+        Some(db),
+        &params.session_id,
+        verbatim_budget,
+    );
     let handoff_tokens = dummy_handoff.len() / 4;
     let tokens_saved = full_tokens.saturating_sub(handoff_tokens) as i64;
     let pct = if full_tokens > 0 {
@@ -265,11 +313,25 @@ pub async fn load_session(
         0
     };
 
-    let transcript = format_handoff(&session, &messages, tokens_saved, pct, Some(db), &params.session_id, verbatim_budget);
+    let transcript = format_handoff(
+        &session,
+        &messages,
+        tokens_saved,
+        pct,
+        Some(db),
+        &params.session_id,
+        verbatim_budget,
+    );
     let token_estimate = transcript.len() / 4;
 
     if session.agent_origin != agent_id {
-        let _ = log_transfer_event(db, &params.session_id, &session.agent_origin, agent_id, tokens_saved);
+        let _ = log_transfer_event(
+            db,
+            &params.session_id,
+            &session.agent_origin,
+            agent_id,
+            tokens_saved,
+        );
     }
 
     let instruction = format!(
@@ -313,10 +375,10 @@ fn budget_split(messages: &[Message], verbatim_budget: usize) -> (&[Message], &[
 }
 
 fn load_fallback_goal(db: &Database, session_id: &str, messages: &[Message]) -> String {
-    if let Ok(facts) = get_facts_by_type(db, session_id, FactType::Goal) {
-        if let Some(fact) = facts.last() {
-            return fact.content.clone();
-        }
+    if let Ok(facts) = get_facts_by_type(db, session_id, FactType::Goal)
+        && let Some(fact) = facts.last()
+    {
+        return fact.content.clone();
     }
     extract_goal(messages)
 }
@@ -348,11 +410,7 @@ pub(crate) fn format_handoff(
 ║ Project: {}
 ║ Turns:   {}  (last turn #{})
 ╚══════════════════════════════════════════════════════════╝\n\n",
-        session.title,
-        origin,
-        project,
-        total,
-        last_turn
+        session.title, origin, project, total, last_turn
     ));
 
     // ── budget-based split ──
@@ -384,8 +442,16 @@ pub(crate) fn format_handoff(
             context.last().map(|m| m.turn_index).unwrap_or(0),
         ));
         for m in context {
-            let agent_label = m.agent_id.as_ref().map(|a| format!(" ({})", a)).unwrap_or_default();
-            let model_label = m.model.as_ref().map(|m| format!(" [{}]", m)).unwrap_or_default();
+            let agent_label = m
+                .agent_id
+                .as_ref()
+                .map(|a| format!(" ({})", a))
+                .unwrap_or_default();
+            let model_label = m
+                .model
+                .as_ref()
+                .map(|m| format!(" [{}]", m))
+                .unwrap_or_default();
             out.push_str(&format!(
                 "[Turn {} | {}{}{}]\n{}\n\n",
                 m.turn_index, m.role, agent_label, model_label, m.content
@@ -416,10 +482,25 @@ fn extract_goal(messages: &[Message]) -> String {
     let mut best_score: usize = 0;
 
     let goal_keywords = [
-        "we need to", "i want to", "goal", "task", "objective",
-        "create", "build", "implement", "make", "solve",
-        "figure out", "fix", "add", "change", "refactor",
-        "the idea is", "we should", "we're going to", "purpose",
+        "we need to",
+        "i want to",
+        "goal",
+        "task",
+        "objective",
+        "create",
+        "build",
+        "implement",
+        "make",
+        "solve",
+        "figure out",
+        "fix",
+        "add",
+        "change",
+        "refactor",
+        "the idea is",
+        "we should",
+        "we're going to",
+        "purpose",
     ];
 
     for m in messages {
@@ -505,7 +586,10 @@ pub(crate) fn format_briefing(
     let project = session.project_path.as_deref().unwrap_or("N/A");
 
     let mut out = String::new();
-    out.push_str(&format!("══ BRIEFING ══  {}  |  {}  |  {} turns  |  {}\n\n", session.title, session.agent_origin, total, project));
+    out.push_str(&format!(
+        "══ BRIEFING ══  {}  |  {}  |  {} turns  |  {}\n\n",
+        session.title, session.agent_origin, total, project
+    ));
 
     // Split: middle (anchor + compressed) and verbatim tail
     let (early, verbatim_msgs) = budget_split(messages, verbatim_budget);
@@ -586,8 +670,7 @@ pub(crate) fn format_briefing(
         };
         out.push_str(&format!(
             "── CONTEXT (COMPRESSED MIDDLE{}) ──\n\n{}\n\n",
-            end_label,
-            summary
+            end_label, summary
         ));
     }
 
@@ -605,7 +688,10 @@ pub(crate) fn format_briefing(
                 "tool" => "T",
                 _ => &m.role,
             };
-            out.push_str(&format!("[{}#{}] {}\n\n", role_char, m.turn_index, m.content));
+            out.push_str(&format!(
+                "[{}#{}] {}\n\n",
+                role_char, m.turn_index, m.content
+            ));
         }
     }
 
@@ -667,7 +753,10 @@ pub(crate) fn format_compact(
                 "tool" => "T",
                 _ => &m.role,
             };
-            out.push_str(&format!("[{}#{}] {}\n\n", role_char, m.turn_index, m.content));
+            out.push_str(&format!(
+                "[{}#{}] {}\n\n",
+                role_char, m.turn_index, m.content
+            ));
         }
     }
 
@@ -683,9 +772,21 @@ pub(crate) fn format_compact(
 fn extract_completed(messages: &[Message]) -> Vec<String> {
     let mut items: Vec<String> = Vec::new();
     let done_indicators = [
-        "done", "completed", "finished", "works now", "all set",
-        "success", "succeeded", "working", "fixed", "resolved",
-        "implemented", "added", "created", "built", "set up",
+        "done",
+        "completed",
+        "finished",
+        "works now",
+        "all set",
+        "success",
+        "succeeded",
+        "working",
+        "fixed",
+        "resolved",
+        "implemented",
+        "added",
+        "created",
+        "built",
+        "set up",
     ];
 
     for m in messages {
@@ -712,10 +813,21 @@ fn extract_completed(messages: &[Message]) -> Vec<String> {
 fn extract_decisions(messages: &[Message]) -> Vec<String> {
     let mut items: Vec<String> = Vec::new();
     let decision_patterns = [
-        "we decided", "i decided", "we chose", "i chose",
-        "going with", "let's use", "we'll use", "we'll go with",
-        "opted for", "settled on", "went with", "selected",
-        "we picked", "the choice is", "choosing",
+        "we decided",
+        "i decided",
+        "we chose",
+        "i chose",
+        "going with",
+        "let's use",
+        "we'll use",
+        "we'll go with",
+        "opted for",
+        "settled on",
+        "went with",
+        "selected",
+        "we picked",
+        "the choice is",
+        "choosing",
     ];
 
     for m in messages {
@@ -727,11 +839,10 @@ fn extract_decisions(messages: &[Message]) -> Vec<String> {
             if let Some(idx) = lower.find(pattern) {
                 // Extract the sentence containing the decision
                 let before = &m.content[..idx];
-                let sent_start = before.rfind(|c| c == '.' || c == '!' || c == '?')
-                    .map(|p| p + 1)
-                    .unwrap_or(0);
+                let sent_start = before.rfind(['.', '!', '?']).map(|p| p + 1).unwrap_or(0);
                 let after = &m.content[idx..];
-                let rel_end = after.find(|c| c == '.' || c == '!' || c == '?')
+                let rel_end = after
+                    .find(['.', '!', '?'])
                     .map(|p| p + 1)
                     .unwrap_or_else(|| after.len().min(150));
                 let sentence = m.content[sent_start..idx + rel_end].trim().to_string();
@@ -812,9 +923,26 @@ fn looks_like_file_dump(content: &str) -> bool {
         return false;
     }
     let code_keywords = [
-        "fn ", "pub ", "let ", "const ", "use ", "import ", "def ",
-        "class ", "function ", "interface ", "struct ", "enum ", "impl ",
-        "return ", "if ", "else ", "for ", "while ", "match ", "case ",
+        "fn ",
+        "pub ",
+        "let ",
+        "const ",
+        "use ",
+        "import ",
+        "def ",
+        "class ",
+        "function ",
+        "interface ",
+        "struct ",
+        "enum ",
+        "impl ",
+        "return ",
+        "if ",
+        "else ",
+        "for ",
+        "while ",
+        "match ",
+        "case ",
     ];
     let code_lines = lines
         .iter()
@@ -871,8 +999,16 @@ pub(crate) fn format_transcript(session: &Session, messages: &[Message]) -> Stri
     let turns: Vec<String> = messages
         .iter()
         .map(|m| {
-            let agent_label = m.agent_id.as_ref().map(|a| format!(" ({})", a)).unwrap_or_default();
-            let model_label = m.model.as_ref().map(|m| format!(" [{}]", m)).unwrap_or_default();
+            let agent_label = m
+                .agent_id
+                .as_ref()
+                .map(|a| format!(" ({})", a))
+                .unwrap_or_default();
+            let model_label = m
+                .model
+                .as_ref()
+                .map(|m| format!(" [{}]", m))
+                .unwrap_or_default();
             format!(
                 "[Turn {} | {}{}{}]\n{}",
                 m.turn_index, m.role, agent_label, model_label, m.content
@@ -895,8 +1031,14 @@ fn truncate_messages(messages: Vec<Message>, max_length: usize) -> Vec<Message> 
         } else {
             let remaining = max_length.saturating_sub(cumulative);
             if remaining > 50 {
-                let truncated_content = format!("{}...", &m.content[..remaining.min(content_len).saturating_sub(3)]);
-                result.push(Message { content: truncated_content, ..m });
+                let truncated_content = format!(
+                    "{}...",
+                    &m.content[..remaining.min(content_len).saturating_sub(3)]
+                );
+                result.push(Message {
+                    content: truncated_content,
+                    ..m
+                });
             }
             break;
         }
@@ -946,7 +1088,9 @@ mod tests {
 
     #[test]
     fn format_choice_serde() {
-        let choice = FormatChoice { format: HandoffFormat::Briefing };
+        let choice = FormatChoice {
+            format: HandoffFormat::Briefing,
+        };
         let json = serde_json::to_string(&choice).unwrap();
         assert_eq!(json, r#"{"format":"briefing"}"#);
 
@@ -960,5 +1104,3 @@ mod tests {
         assert_elicit_safe::<FormatChoice>();
     }
 }
-
-

@@ -1,10 +1,10 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::db::database::{Database, StorageConnector};
-use crate::db::messages::{add_message, NewMessage};
+use crate::db::messages::{NewMessage, add_message};
 use crate::db::sessions::get_session;
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -36,8 +36,8 @@ pub async fn import_session(
         .ok_or_else(|| ErrorData::internal_error("Missing 'messages' array", None))?;
 
     let merge = params.merge.unwrap_or(false);
-    let existing = get_session(db, session_id)
-        .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+    let existing =
+        get_session(db, session_id).map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 
     let was_merge = existing.is_some();
 
@@ -57,7 +57,11 @@ pub async fn import_session(
         let tags: Vec<String> = session_data
             .get("tags")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         let created_at = session_data
             .get("created_at")
@@ -82,10 +86,13 @@ pub async fn import_session(
         )
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
     } else if !merge {
-        return Err(ErrorData::internal_error(format!(
-            "Session {} already exists. Set merge=true to merge messages.",
-            session_id
-        ), None));
+        return Err(ErrorData::internal_error(
+            format!(
+                "Session {} already exists. Set merge=true to merge messages.",
+                session_id
+            ),
+            None,
+        ));
     }
 
     let mut imported_count = 0i64;
@@ -114,7 +121,10 @@ pub async fn import_session(
                     .get("content_type")
                     .and_then(|v| v.as_str())
                     .map(String::from),
-                agent_id: msg.get("agent_id").and_then(|v| v.as_str()).map(String::from),
+                agent_id: msg
+                    .get("agent_id")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
                 model: msg.get("model").and_then(|v| v.as_str()).map(String::from),
                 tokens_in: msg.get("tokens_in").and_then(|v| v.as_i64()),
                 tokens_out: msg.get("tokens_out").and_then(|v| v.as_i64()),

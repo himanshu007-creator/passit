@@ -87,14 +87,13 @@ fn collect_chat_files(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_dir() {
-                if let Ok(sub_entries) = std::fs::read_dir(&path) {
-                    for sub in sub_entries.flatten() {
-                        let sp = sub.path();
-                        if sp.extension().and_then(|e| e.to_str()) == Some("jsonl") && sp.is_file()
-                        {
-                            files.push(sp);
-                        }
+            if path.is_dir()
+                && let Ok(sub_entries) = std::fs::read_dir(&path)
+            {
+                for sub in sub_entries.flatten() {
+                    let sp = sub.path();
+                    if sp.extension().and_then(|e| e.to_str()) == Some("jsonl") && sp.is_file() {
+                        files.push(sp);
                     }
                 }
             }
@@ -110,7 +109,11 @@ fn parse_gemini_chat(
     project_name: &str,
 ) -> Result<ImportedSession, String> {
     let content = std::fs::read_to_string(path).map_err(|e| format!("read: {}", e))?;
-    let lines: Vec<&str> = content.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).collect();
+    let lines: Vec<&str> = content
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .collect();
 
     if lines.is_empty() {
         return Err("empty file".to_string());
@@ -156,10 +159,7 @@ fn parse_gemini_chat(
         let json: serde_json::Value =
             serde_json::from_str(line).map_err(|e| format!("json: {} in {}", e, path.display()))?;
 
-        let msg_type = json
-            .get("type")
-            .and_then(|t| t.as_str())
-            .unwrap_or("");
+        let msg_type = json.get("type").and_then(|t| t.as_str()).unwrap_or("");
 
         match msg_type {
             "user" => {
@@ -196,10 +196,10 @@ fn parse_gemini_chat(
                         .map(|s| s.to_string());
 
                     let tokens = json.get("tokens");
-                    let tokens_in =
-                        tokens.and_then(|t| t.get("input")).and_then(|v| v.as_i64());
-                    let tokens_out =
-                        tokens.and_then(|t| t.get("output")).and_then(|v| v.as_i64());
+                    let tokens_in = tokens.and_then(|t| t.get("input")).and_then(|v| v.as_i64());
+                    let tokens_out = tokens
+                        .and_then(|t| t.get("output"))
+                        .and_then(|v| v.as_i64());
 
                     messages.push(ImportedMessage {
                         role: "assistant".to_string(),
@@ -252,11 +252,7 @@ fn extract_gemini_user_text(json: &serde_json::Value) -> Option<String> {
         }
         serde_json::Value::String(s) => {
             let s = s.trim().to_string();
-            if s.is_empty() {
-                None
-            } else {
-                Some(s)
-            }
+            if s.is_empty() { None } else { Some(s) }
         }
         _ => None,
     }
@@ -267,11 +263,7 @@ fn extract_gemini_response_text(json: &serde_json::Value) -> Option<String> {
     match content {
         serde_json::Value::String(s) => {
             let s = s.trim().to_string();
-            if s.is_empty() {
-                None
-            } else {
-                Some(s)
-            }
+            if s.is_empty() { None } else { Some(s) }
         }
         serde_json::Value::Array(arr) => {
             let texts: Vec<String> = arr

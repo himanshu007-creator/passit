@@ -1,11 +1,11 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::db::database::Database;
 use crate::db::messages::copy_messages;
-use crate::db::sessions::{create_session, get_session, CreateSessionParams};
+use crate::db::sessions::{CreateSessionParams, create_session, get_session};
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct BranchSessionParams {
@@ -20,7 +20,9 @@ pub async fn branch_session(
 ) -> Result<CallToolResult, ErrorData> {
     let source = get_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
-        .ok_or_else(|| ErrorData::internal_error(format!("Session not found: {}", params.session_id), None))?;
+        .ok_or_else(|| {
+            ErrorData::internal_error(format!("Session not found: {}", params.session_id), None)
+        })?;
 
     let title = params
         .branch_title

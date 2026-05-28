@@ -88,7 +88,14 @@ pub fn add_fact(db: &Database, fact: NewFact) -> Result<SessionFact, rusqlite::E
     conn.execute(
         "INSERT INTO session_facts (id, session_id, fact_type, content, turn_index, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![id, fact.session_id, fact.fact_type.as_str(), fact.content, fact.turn_index, now],
+        params![
+            id,
+            fact.session_id,
+            fact.fact_type.as_str(),
+            fact.content,
+            fact.turn_index,
+            now
+        ],
     )?;
 
     Ok(SessionFact {
@@ -184,7 +191,10 @@ pub fn prune_facts(
 #[allow(dead_code)]
 pub fn delete_facts(db: &Database, session_id: &str) -> Result<(), rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
-    conn.execute("DELETE FROM session_facts WHERE session_id = ?1", params![session_id])?;
+    conn.execute(
+        "DELETE FROM session_facts WHERE session_id = ?1",
+        params![session_id],
+    )?;
     Ok(())
 }
 
@@ -254,22 +264,50 @@ fn is_duplicate_fact(
 // ── Write-time extraction from single message ──
 
 const DECISION_PATTERNS: &[&str] = &[
-    "we decided", "i decided", "we chose", "i chose",
-    "going with", "let's use", "we'll use", "we'll go with",
-    "opted for", "settled on", "went with", "selected",
-    "we picked", "the choice is", "choosing",
+    "we decided",
+    "i decided",
+    "we chose",
+    "i chose",
+    "going with",
+    "let's use",
+    "we'll use",
+    "we'll go with",
+    "opted for",
+    "settled on",
+    "went with",
+    "selected",
+    "we picked",
+    "the choice is",
+    "choosing",
 ];
 
 const COMPLETED_PATTERNS: &[&str] = &[
-    "done", "completed", "finished", "works now", "all set",
-    "success", "succeeded", "working", "fixed", "resolved",
-    "implemented", "added", "created", "built", "set up",
+    "done",
+    "completed",
+    "finished",
+    "works now",
+    "all set",
+    "success",
+    "succeeded",
+    "working",
+    "fixed",
+    "resolved",
+    "implemented",
+    "added",
+    "created",
+    "built",
+    "set up",
 ];
 
 const GOAL_REDIRECT_PATTERNS: &[&str] = &[
-    "actually", "let's change direction", "instead let's",
-    "on second thought", "new plan", "let me clarify",
-    "what i really want", "the actual goal",
+    "actually",
+    "let's change direction",
+    "instead let's",
+    "on second thought",
+    "new plan",
+    "let me clarify",
+    "what i really want",
+    "the actual goal",
 ];
 
 pub fn extract_facts_from_message(msg: &Message, is_first_user: bool) -> Vec<ExtractedFact> {
@@ -316,13 +354,10 @@ pub fn extract_facts_from_message(msg: &Message, is_first_user: bool) -> Vec<Ext
             for pattern in DECISION_PATTERNS {
                 if let Some(idx) = lower.find(pattern) {
                     let before = &msg.content[..idx];
-                    let sent_start = before
-                        .rfind(|c| c == '.' || c == '!' || c == '?')
-                        .map(|p| p + 1)
-                        .unwrap_or(0);
+                    let sent_start = before.rfind(['.', '!', '?']).map(|p| p + 1).unwrap_or(0);
                     let after = &msg.content[idx..];
                     let rel_end = after
-                        .find(|c| c == '.' || c == '!' || c == '?')
+                        .find(['.', '!', '?'])
                         .map(|p| p + 1)
                         .unwrap_or_else(|| after.len().min(150));
                     let sentence = msg.content[sent_start..idx + rel_end].trim().to_string();
@@ -361,7 +396,8 @@ pub fn extract_facts_from_message(msg: &Message, is_first_user: bool) -> Vec<Ext
                 }
                 let is_path = (path.contains('/') || path.starts_with('~'))
                     && (path.contains('.') || path.starts_with('/'));
-                let is_code_marker = path.starts_with("```") || path == "//" || path.starts_with('\\');
+                let is_code_marker =
+                    path.starts_with("```") || path == "//" || path.starts_with('\\');
                 if is_path && !is_code_marker {
                     facts.push(ExtractedFact {
                         fact_type: FactType::FileTouched,
@@ -379,7 +415,8 @@ pub fn extract_facts_from_message(msg: &Message, is_first_user: bool) -> Vec<Ext
                 }
                 let is_path = (path.contains('/') || path.starts_with('~'))
                     && (path.contains('.') || path.starts_with('/'));
-                let is_code_marker = path.starts_with("```") || path == "//" || path.starts_with('\\');
+                let is_code_marker =
+                    path.starts_with("```") || path == "//" || path.starts_with('\\');
                 if is_path && !is_code_marker {
                     facts.push(ExtractedFact {
                         fact_type: FactType::FileTouched,
@@ -416,7 +453,7 @@ pub fn try_extract_and_store(db: &Database, msg: &Message, is_first_user: bool) 
                 }
                 let nf = NewFact {
                     session_id: msg.session_id.clone(),
-                    fact_type: fact.fact_type.clone(),
+                    fact_type: fact.fact_type,
                     content: fact.content,
                     turn_index: msg.turn_index,
                 };
@@ -424,7 +461,12 @@ pub fn try_extract_and_store(db: &Database, msg: &Message, is_first_user: bool) 
                     tracing::warn!("failed to store fact: {e}");
                     continue;
                 }
-                if let Err(e) = prune_facts(db, &msg.session_id, fact.fact_type, fact.fact_type.max_per_session()) {
+                if let Err(e) = prune_facts(
+                    db,
+                    &msg.session_id,
+                    fact.fact_type,
+                    fact.fact_type.max_per_session(),
+                ) {
                     tracing::warn!("failed to prune facts: {e}");
                 }
             }
@@ -443,7 +485,7 @@ fn chrono_now() -> i64 {
 mod tests {
     use super::*;
     use crate::db::database::Database;
-    use crate::db::sessions::{create_session, CreateSessionParams};
+    use crate::db::sessions::{CreateSessionParams, create_session};
 
     fn create_test_session(db: &Database) -> String {
         let session = create_session(
@@ -487,9 +529,36 @@ mod tests {
         let db = Database::open_in_memory().unwrap();
         let sid = create_test_session(&db);
 
-        add_fact(&db, NewFact { session_id: sid.clone(), fact_type: FactType::Decision, content: "d1".into(), turn_index: 1 }).unwrap();
-        add_fact(&db, NewFact { session_id: sid.clone(), fact_type: FactType::Completed, content: "c1".into(), turn_index: 2 }).unwrap();
-        add_fact(&db, NewFact { session_id: sid.clone(), fact_type: FactType::Decision, content: "d2".into(), turn_index: 3 }).unwrap();
+        add_fact(
+            &db,
+            NewFact {
+                session_id: sid.clone(),
+                fact_type: FactType::Decision,
+                content: "d1".into(),
+                turn_index: 1,
+            },
+        )
+        .unwrap();
+        add_fact(
+            &db,
+            NewFact {
+                session_id: sid.clone(),
+                fact_type: FactType::Completed,
+                content: "c1".into(),
+                turn_index: 2,
+            },
+        )
+        .unwrap();
+        add_fact(
+            &db,
+            NewFact {
+                session_id: sid.clone(),
+                fact_type: FactType::Decision,
+                content: "d2".into(),
+                turn_index: 3,
+            },
+        )
+        .unwrap();
 
         let decisions = get_facts_by_type(&db, &sid, FactType::Decision).unwrap();
         assert_eq!(decisions.len(), 2);
@@ -527,7 +596,16 @@ mod tests {
         let db = Database::open_in_memory().unwrap();
         let sid = create_test_session(&db);
 
-        add_fact(&db, NewFact { session_id: sid.clone(), fact_type: FactType::Goal, content: "test".into(), turn_index: 0 }).unwrap();
+        add_fact(
+            &db,
+            NewFact {
+                session_id: sid.clone(),
+                fact_type: FactType::Goal,
+                content: "test".into(),
+                turn_index: 0,
+            },
+        )
+        .unwrap();
         delete_facts(&db, &sid).unwrap();
 
         let facts = get_facts(&db, &sid).unwrap();
@@ -567,7 +645,10 @@ mod tests {
         assert_eq!(FactType::Decision.as_str(), "decision");
 
         assert_eq!("goal".parse::<FactType>().unwrap(), FactType::Goal);
-        assert_eq!("status_summary".parse::<FactType>().unwrap(), FactType::StatusSummary);
+        assert_eq!(
+            "status_summary".parse::<FactType>().unwrap(),
+            FactType::StatusSummary
+        );
         assert!("unknown".parse::<FactType>().is_err());
     }
 
@@ -576,12 +657,31 @@ mod tests {
         let db = Database::open_in_memory().unwrap();
         let sid = create_test_session(&db);
 
-        add_fact(&db, NewFact { session_id: sid.clone(), fact_type: FactType::Goal, content: "g".into(), turn_index: 0 }).unwrap();
-        add_fact(&db, NewFact { session_id: sid.clone(), fact_type: FactType::Decision, content: "d".into(), turn_index: 1 }).unwrap();
+        add_fact(
+            &db,
+            NewFact {
+                session_id: sid.clone(),
+                fact_type: FactType::Goal,
+                content: "g".into(),
+                turn_index: 0,
+            },
+        )
+        .unwrap();
+        add_fact(
+            &db,
+            NewFact {
+                session_id: sid.clone(),
+                fact_type: FactType::Decision,
+                content: "d".into(),
+                turn_index: 1,
+            },
+        )
+        .unwrap();
 
         // Delete the session — facts should cascade
         let conn = db.conn().lock().expect("poisoned lock");
-        conn.execute("DELETE FROM sessions WHERE id = ?1", params![sid]).unwrap();
+        conn.execute("DELETE FROM sessions WHERE id = ?1", params![sid])
+            .unwrap();
         drop(conn);
 
         let facts = get_facts(&db, &sid).unwrap();
@@ -634,7 +734,11 @@ mod tests {
 
     #[test]
     fn test_goal_redirect_pattern() {
-        let msg = make_msg("user", "Actually, let's change direction and use Python instead", 5);
+        let msg = make_msg(
+            "user",
+            "Actually, let's change direction and use Python instead",
+            5,
+        );
         let facts = extract_facts_from_message(&msg, false);
         assert_eq!(facts.len(), 1);
         assert_eq!(facts[0].fact_type, FactType::Goal);
@@ -651,18 +755,31 @@ mod tests {
 
     #[test]
     fn test_extract_completed() {
-        let msg = make_msg("assistant", "Implemented the user authentication module.\n\nNext we need to...", 8);
+        let msg = make_msg(
+            "assistant",
+            "Implemented the user authentication module.\n\nNext we need to...",
+            8,
+        );
         let facts = extract_facts_from_message(&msg, false);
-        let completed: Vec<_> = facts.iter().filter(|f| f.fact_type == FactType::Completed).collect();
+        let completed: Vec<_> = facts
+            .iter()
+            .filter(|f| f.fact_type == FactType::Completed)
+            .collect();
         assert_eq!(completed.len(), 1);
-        assert_eq!(completed[0].content, "Implemented the user authentication module");
+        assert_eq!(
+            completed[0].content,
+            "Implemented the user authentication module"
+        );
     }
 
     #[test]
     fn test_extract_file_touched() {
         let msg = make_msg("assistant", "Check `src/main.rs` for the entry point", 4);
         let facts = extract_facts_from_message(&msg, false);
-        let files: Vec<_> = facts.iter().filter(|f| f.fact_type == FactType::FileTouched).collect();
+        let files: Vec<_> = facts
+            .iter()
+            .filter(|f| f.fact_type == FactType::FileTouched)
+            .collect();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].content, "src/main.rs");
     }
@@ -671,7 +788,10 @@ mod tests {
     fn test_extract_file_from_tool() {
         let msg = make_msg("tool", "Found in `src/db/database.rs`", 5);
         let facts = extract_facts_from_message(&msg, false);
-        let files: Vec<_> = facts.iter().filter(|f| f.fact_type == FactType::FileTouched).collect();
+        let files: Vec<_> = facts
+            .iter()
+            .filter(|f| f.fact_type == FactType::FileTouched)
+            .collect();
         assert_eq!(files.len(), 1);
     }
 

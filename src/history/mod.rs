@@ -1,6 +1,6 @@
 use crate::db::database::{Database, StorageConnector};
-use crate::db::sessions::{chrono_now, create_session, CreateSessionParams};
-use crate::db::messages::{add_message, NewMessage};
+use crate::db::messages::{NewMessage, add_message};
+use crate::db::sessions::{CreateSessionParams, chrono_now, create_session};
 
 pub mod claude;
 pub mod gemini;
@@ -103,7 +103,9 @@ pub fn run_history_scanners(db: &Database) -> ScannerSummary {
                 Err(e) => {
                     tracing::warn!(
                         "[history] failed to import {} session {}: {}",
-                        scanner.name(), session.original_id, e
+                        scanner.name(),
+                        session.original_id,
+                        e
                     );
                 }
             }
@@ -122,7 +124,13 @@ pub fn run_history_scanners(db: &Database) -> ScannerSummary {
     if summary.total_sessions > 0 {
         tracing::info!(
             "[history] imported {} sessions ({} messages) from {} source(s)",
-            summary.total_sessions, summary.total_messages, summary.scanners.iter().filter(|s| s.sessions_imported > 0).count()
+            summary.total_sessions,
+            summary.total_messages,
+            summary
+                .scanners
+                .iter()
+                .filter(|s| s.sessions_imported > 0)
+                .count()
         );
     }
 

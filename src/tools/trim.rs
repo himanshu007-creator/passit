@@ -1,5 +1,5 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -31,7 +31,9 @@ pub async fn trim_session(
 ) -> Result<CallToolResult, ErrorData> {
     let session = get_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
-        .ok_or_else(|| ErrorData::internal_error(format!("Session not found: {}", params.session_id), None))?;
+        .ok_or_else(|| {
+            ErrorData::internal_error(format!("Session not found: {}", params.session_id), None)
+        })?;
 
     let messages = get_messages_by_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
@@ -57,7 +59,8 @@ pub async fn trim_session(
     let keep_from_start = params.from_start.unwrap_or(false);
     let trimmed: Vec<_> = if keep_from_start {
         let mut acc = 0usize;
-        messages.into_iter()
+        messages
+            .into_iter()
             .take_while(|m| {
                 let next = acc + m.content.len();
                 let keep = next <= max_chars;
@@ -67,7 +70,9 @@ pub async fn trim_session(
             .collect()
     } else {
         let mut acc = 0usize;
-        let mut msgs: Vec<_> = messages.into_iter().rev()
+        let mut msgs: Vec<_> = messages
+            .into_iter()
+            .rev()
             .take_while(|m| {
                 let next = acc + m.content.len();
                 let keep = next <= max_chars;

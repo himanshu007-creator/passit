@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use passit::db::database::Database;
-use passit::db::messages::{add_message, get_messages_by_session, NewMessage};
-use passit::db::sessions::{create_session, get_session, list_sessions, CreateSessionParams, SessionFilter};
+use passit::db::messages::{NewMessage, add_message, get_messages_by_session};
+use passit::db::sessions::{
+    CreateSessionParams, SessionFilter, create_session, get_session, list_sessions,
+};
 use passit::tools;
 
 fn get_text_content(content: &[rmcp::model::Content]) -> String {
-    content.first()
+    content
+        .first()
         .and_then(|c| c.raw.as_text())
         .map(|t| t.text.clone())
         .unwrap_or_default()
@@ -15,7 +18,6 @@ fn get_text_content(content: &[rmcp::model::Content]) -> String {
 async fn setup_db() -> Arc<Database> {
     Arc::new(Database::open_in_memory().unwrap())
 }
-
 
 #[tokio::test]
 async fn test_save_and_load_tool_integration() {
@@ -114,8 +116,7 @@ async fn test_list_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["total"], 0);
 
     // Create a session
@@ -145,8 +146,7 @@ async fn test_list_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["total"], 1);
 }
 
@@ -209,8 +209,7 @@ async fn test_branch_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["messages_copied"], 2);
     assert_eq!(json["branch_title"], "Forked");
 
@@ -225,8 +224,7 @@ async fn test_branch_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["messages_copied"], 1);
 }
 
@@ -287,8 +285,7 @@ async fn test_search_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["results"].as_array().unwrap().len(), 2);
 }
 
@@ -333,8 +330,7 @@ async fn test_export_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["format"], "json");
     assert!(json["content"].as_str().unwrap().contains("Export Test"));
 
@@ -388,8 +384,7 @@ async fn test_import_tool() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["imported_messages"], 2);
     assert!(!json["was_merge"].as_bool().unwrap());
 
@@ -466,8 +461,18 @@ async fn test_full_handoff_cycle() {
     .unwrap();
     let loaded_json: serde_json::Value =
         serde_json::from_str(&get_text_content(&loaded.content)).unwrap();
-    assert!(loaded_json["transcript"].as_str().unwrap().contains("handle errors"));
-    assert!(loaded_json["instruction"].as_str().unwrap().contains("HANDOFF"));
+    assert!(
+        loaded_json["transcript"]
+            .as_str()
+            .unwrap()
+            .contains("handle errors")
+    );
+    assert!(
+        loaded_json["instruction"]
+            .as_str()
+            .unwrap()
+            .contains("HANDOFF")
+    );
 
     // Agent B continues the conversation
     let result_b = tools::save::save_session_turn(
@@ -597,8 +602,7 @@ async fn test_load_claude_session() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     let instruction = json["instruction"].as_str().unwrap();
     assert!(transcript.contains("claude-code"), "origin label");
@@ -672,14 +676,16 @@ async fn test_load_gemini_session() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     let instruction = json["instruction"].as_str().unwrap();
     assert!(transcript.contains("══ BRIEFING ══"), "briefing header");
     assert!(transcript.contains("API Design Review"), "title");
     assert!(transcript.contains("gemini-cli"), "origin label");
-    assert!(instruction.contains("LATEST"), "briefing instruction points to latest message");
+    assert!(
+        instruction.contains("LATEST"),
+        "briefing instruction points to latest message"
+    );
 }
 
 #[tokio::test]
@@ -747,8 +753,7 @@ async fn test_load_opencode_session() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     let instruction = json["instruction"].as_str().unwrap();
     assert!(transcript.contains("HANDOFF"), "compact header");
@@ -824,14 +829,19 @@ async fn test_load_briefing_format() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     let instruction = json["instruction"].as_str().unwrap();
-    assert!(transcript.contains("══ BRIEFING ══"), "briefing header with double equals");
+    assert!(
+        transcript.contains("══ BRIEFING ══"),
+        "briefing header with double equals"
+    );
     assert!(transcript.contains("Architecture Review"), "title");
     assert!(transcript.contains("microservices"), "session content");
-    assert!(instruction.contains("LATEST"), "briefing instruction points to latest message");
+    assert!(
+        instruction.contains("LATEST"),
+        "briefing instruction points to latest message"
+    );
 }
 
 #[tokio::test]
@@ -899,8 +909,7 @@ async fn test_load_compact_format() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     let instruction = json["instruction"].as_str().unwrap();
     assert!(transcript.contains("HANDOFF"));
@@ -989,8 +998,7 @@ async fn test_load_transcript_format() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     let instruction = json["instruction"].as_str().unwrap();
     assert!(transcript.contains("=== Session:"), "transcript header");
@@ -999,7 +1007,10 @@ async fn test_load_transcript_format() {
     assert!(transcript.contains("[Turn 2 | user]"), "turn 2 label");
     assert!(transcript.contains("The app crashes"), "turn 1 content");
     assert!(transcript.contains("Check the config"), "turn 2 content");
-    assert!(transcript.contains("missing a required field"), "turn 3 content");
+    assert!(
+        transcript.contains("missing a required field"),
+        "turn 3 content"
+    );
     assert!(instruction.contains("transcript"), "transcript instruction");
 }
 
@@ -1068,8 +1079,7 @@ async fn test_load_messages_format() {
     .await
     .unwrap();
 
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     assert_eq!(json["session"]["title"], "JSON Test");
     assert_eq!(json["session"]["agent_origin"], "test-agent");
     assert_eq!(json["session"]["tags"], serde_json::json!(["json"]));
@@ -1103,8 +1113,7 @@ async fn test_elicit_protocol() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let sid = json["session_id"].as_str().unwrap().to_string();
 
     tools::save::save_session_turn(
@@ -1145,7 +1154,10 @@ async fn test_elicit_protocol() {
     .unwrap();
     let text = get_text_content(&result.content);
     assert!(text.contains("HANDOFF"), "should contain handoff content");
-    assert!(text.contains("binary search"), "should contain session content");
+    assert!(
+        text.contains("binary search"),
+        "should contain session content"
+    );
 
     // With explicit format, content is returned directly
     let result = tools::load::load_session(
@@ -1165,10 +1177,17 @@ async fn test_elicit_protocol() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
-    assert!(json["transcript"].as_str().unwrap().contains("binary search"));
-    assert_eq!(json["instruction"].as_str().unwrap(), "[CONTINUE] Respond to last turn directly. No re-analysis, no greeting.");
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    assert!(
+        json["transcript"]
+            .as_str()
+            .unwrap()
+            .contains("binary search")
+    );
+    assert_eq!(
+        json["instruction"].as_str().unwrap(),
+        "[CONTINUE] Respond to last turn directly. No re-analysis, no greeting."
+    );
 
     // from_turn=0 loads both turns
     let result = tools::load::load_session(
@@ -1188,9 +1207,13 @@ async fn test_elicit_protocol() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
-    assert!(json["transcript"].as_str().unwrap().contains("binary search"));
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    assert!(
+        json["transcript"]
+            .as_str()
+            .unwrap()
+            .contains("binary search")
+    );
 
     // from_turn=1 loads only the assistant turn
     let result = tools::load::load_session(
@@ -1210,15 +1233,20 @@ async fn test_elicit_protocol() {
     )
     .await
     .unwrap();
-    let json: serde_json::Value =
-        serde_json::from_str(&get_text_content(&result.content)).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&get_text_content(&result.content)).unwrap();
     let transcript = json["transcript"].as_str().unwrap();
     // Title is auto-generated from first user message so "Let's implement" appears in the session header
     assert!(transcript.contains("Let's implement"), "title from session");
     // Only 1 message in transcript (turn 1, the assistant turn)
-    assert!(transcript.contains("binary_search"), "assistant turn included");
+    assert!(
+        transcript.contains("binary_search"),
+        "assistant turn included"
+    );
     assert_eq!(transcript.matches("[Turn").count(), 1, "only one turn");
-    assert!(!transcript.contains("[Turn 0 | user]"), "user turn excluded");
+    assert!(
+        !transcript.contains("[Turn 0 | user]"),
+        "user turn excluded"
+    );
 
     // format=None + from_turn=Some(1): defaults to handoff, loads from turn 1
     let result = tools::load::load_session(
@@ -1240,5 +1268,8 @@ async fn test_elicit_protocol() {
     .unwrap();
     let text = get_text_content(&result.content);
     assert!(text.contains("HANDOFF"), "should contain handoff content");
-    assert!(text.contains("binary search"), "should include session goal");
+    assert!(
+        text.contains("binary search"),
+        "should include session goal"
+    );
 }

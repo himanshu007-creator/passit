@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
+use rmcp::ErrorData;
 use rmcp::handler::server::router::Router;
 use rmcp::handler::server::router::tool::ToolRoute;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{Implementation, ServerCapabilities, ServerInfo, Tool};
 use rmcp::service::ServiceExt;
 use rmcp::transport::stdio;
-use rmcp::ErrorData;
 use serde::de::DeserializeOwned;
 
 use crate::config::Config;
@@ -24,10 +24,13 @@ fn make_tool<T: schemars::JsonSchema>(name: &'static str, description: &'static 
     Tool::new(name, description, map)
 }
 
-fn parse_params<T: DeserializeOwned>(args: Option<rmcp::model::JsonObject>) -> Result<T, ErrorData> {
-    let value = args.map(serde_json::Value::Object).unwrap_or(serde_json::json!({}));
-    serde_json::from_value(value)
-        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))
+fn parse_params<T: DeserializeOwned>(
+    args: Option<rmcp::model::JsonObject>,
+) -> Result<T, ErrorData> {
+    let value = args
+        .map(serde_json::Value::Object)
+        .unwrap_or(serde_json::json!({}));
+    serde_json::from_value(value).map_err(|e| ErrorData::invalid_params(e.to_string(), None))
 }
 
 fn build_router(handler: SessionManager) -> Router<SessionManager> {
@@ -90,13 +93,16 @@ fn drop_tool() -> ToolRoute<SessionManager> {
             Box::pin(async move {
                 let params = parse_params::<tools::load::LoadSessionParams>(args)?;
                 tools::load::load_session(
-                    &db, params, &agent_id,
+                    &db,
+                    params,
+                    &agent_id,
                     config.verbatim_budget,
                     config.summary_budget,
                     config.anchor_budget,
                     config.llm_summary_enabled,
                     Some(peer),
-                ).await
+                )
+                .await
             })
         },
     )
@@ -234,9 +240,7 @@ fn status_tool() -> ToolRoute<SessionManager> {
         ),
         |ctx: ToolCallContext<'_, SessionManager>| {
             let db = ctx.service.db.clone();
-            Box::pin(async move {
-                tools::status::status_tool(&db).await
-            })
+            Box::pin(async move { tools::status::status_tool(&db).await })
         },
     )
 }
@@ -271,9 +275,7 @@ fn summary_tool() -> ToolRoute<SessionManager> {
         ),
         |ctx: ToolCallContext<'_, SessionManager>| {
             let db = ctx.service.db.clone();
-            Box::pin(async move {
-                tools::summary::summary_tool(&db).await
-            })
+            Box::pin(async move { tools::summary::summary_tool(&db).await })
         },
     )
 }
@@ -303,19 +305,20 @@ fn convert_tool() -> ToolRoute<SessionManager> {
 
 impl rmcp::ServerHandler for SessionManager {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(
-            ServerCapabilities::builder()
-                .enable_tools()
-                .build(),
-        )
-        .with_server_info(Implementation::new("passit", env!("CARGO_PKG_VERSION")))
+        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+            .with_server_info(Implementation::new("passit", env!("CARGO_PKG_VERSION")))
     }
 }
 
-pub async fn run_mcp_server(config: Config) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+pub async fn run_mcp_server(
+    config: Config,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let db = Arc::new(Database::open(&config.db_path)?);
     let db_path = config.db_path.clone();
-    let handler = SessionManager { db: db.clone(), config };
+    let handler = SessionManager {
+        db: db.clone(),
+        config,
+    };
     let router = build_router(handler);
 
     let logo = r"
@@ -343,8 +346,14 @@ pub async fn run_mcp_server(config: Config) -> Result<(), Box<dyn std::error::Er
         }
     });
 
-    let session_count = db.conn().lock().ok()
-        .and_then(|c| c.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get::<_, i64>(0)).ok())
+    let session_count = db
+        .conn()
+        .lock()
+        .ok()
+        .and_then(|c| {
+            c.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get::<_, i64>(0))
+                .ok()
+        })
         .unwrap_or(0);
     tracing::info!(
         "passit {} ready | {} sessions | {}",

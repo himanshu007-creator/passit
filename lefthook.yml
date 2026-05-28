@@ -1,0 +1,9 @@
+pre-commit:
+  commands:
+    fmt:
+      run: cargo fmt --check
+      stage_fixed: true
+    clippy:
+      run: cargo clippy -- -D warnings
+    test:
+      run: cargo test --quiet

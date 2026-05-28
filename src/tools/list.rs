@@ -1,10 +1,10 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::db::database::Database;
-use crate::db::sessions::{list_sessions, SessionFilter};
+use crate::db::sessions::{SessionFilter, list_sessions};
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ListSessionsParams {
@@ -31,8 +31,8 @@ pub async fn list_sessions_tool(
         source: params.source,
     };
 
-    let (sessions, total) = list_sessions(db, filter)
-        .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+    let (sessions, total) =
+        list_sessions(db, filter).map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 
     let result = serde_json::json!({
         "sessions": sessions,

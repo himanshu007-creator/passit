@@ -1,14 +1,14 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::db::database::Database;
 use crate::db::facts::try_extract_and_store;
-use crate::db::messages::{add_message, get_message_count, NewMessage};
+use crate::db::messages::{NewMessage, add_message, get_message_count};
 use crate::db::sessions::{
-    create_session, get_session, update_session_timestamp, update_session_title,
-    generate_title, CreateSessionParams,
+    CreateSessionParams, create_session, generate_title, get_session, update_session_timestamp,
+    update_session_title,
 };
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -43,16 +43,15 @@ pub async fn save_session_turn(
 
     match params.session_id {
         Some(ref sid) => {
-            let existing = get_session(db, sid)
-                .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            let existing =
+                get_session(db, sid).map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
             match existing {
                 Some(_) => {
                     session_id = sid.clone();
                     update_session_timestamp(db, &session_id)
                         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 
-                    if params.role == "user"
-                        && get_message_count(db, &session_id).unwrap_or(0) == 0
+                    if params.role == "user" && get_message_count(db, &session_id).unwrap_or(0) == 0
                     {
                         let title = generate_title(
                             &params.content,
@@ -63,14 +62,22 @@ pub async fn save_session_turn(
                     }
                 }
                 None => {
-                    return Err(ErrorData::internal_error(format!("Session not found: {}", sid), None));
+                    return Err(ErrorData::internal_error(
+                        format!("Session not found: {}", sid),
+                        None,
+                    ));
                 }
             }
         }
         None => {
-            let agent_origin = params.agent_id.clone().unwrap_or_else(|| default_agent_id.to_string());
+            let agent_origin = params
+                .agent_id
+                .clone()
+                .unwrap_or_else(|| default_agent_id.to_string());
             let project_path = params.project_path.clone().or_else(|| {
-                std::env::current_dir().ok().and_then(|p| p.to_str().map(|s| s.to_string()))
+                std::env::current_dir()
+                    .ok()
+                    .and_then(|p| p.to_str().map(|s| s.to_string()))
             });
             let title = generate_title(&params.content, &agent_origin);
             let tags = params.tags.clone().unwrap_or_default();
@@ -90,8 +97,8 @@ pub async fn save_session_turn(
         }
     }
 
-    let is_first_user = params.role == "user"
-        && get_message_count(db, &session_id).unwrap_or(0) == 0;
+    let is_first_user =
+        params.role == "user" && get_message_count(db, &session_id).unwrap_or(0) == 0;
 
     let msg = add_message(
         db,

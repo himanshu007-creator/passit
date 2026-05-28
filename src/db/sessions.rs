@@ -65,7 +65,10 @@ impl Default for SessionFilter {
     }
 }
 
-pub fn create_session(db: &Database, params: CreateSessionParams) -> Result<Session, rusqlite::Error> {
+pub fn create_session(
+    db: &Database,
+    params: CreateSessionParams,
+) -> Result<Session, rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     let id = format!("ses_{}", Ulid::new());
     let now = chrono_now();
@@ -125,7 +128,10 @@ pub fn get_session(db: &Database, id: &str) -> Result<Option<Session>, rusqlite:
     }
 }
 
-pub fn list_sessions(db: &Database, filter: SessionFilter) -> Result<(Vec<SessionSummary>, i64), rusqlite::Error> {
+pub fn list_sessions(
+    db: &Database,
+    filter: SessionFilter,
+) -> Result<(Vec<SessionSummary>, i64), rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     let mut where_clauses: Vec<String> = Vec::new();
     let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -158,7 +164,10 @@ pub fn list_sessions(db: &Database, filter: SessionFilter) -> Result<(Vec<Sessio
     };
 
     let count_sql = format!("SELECT COUNT(*) FROM sessions s {}", where_sql);
-    let total: i64 = conn.query_row(&count_sql, rusqlite::params_from_iter(&param_values), |r| r.get(0))?;
+    let total: i64 =
+        conn.query_row(&count_sql, rusqlite::params_from_iter(&param_values), |r| {
+            r.get(0)
+        })?;
 
     let limit = filter.limit.unwrap_or(20);
     let offset = filter.offset.unwrap_or(0);
@@ -204,7 +213,11 @@ pub fn update_session_timestamp(db: &Database, id: &str) -> Result<(), rusqlite:
     Ok(())
 }
 
-pub fn increment_load_count(db: &Database, id: &str, loaded_by: &str) -> Result<(), rusqlite::Error> {
+pub fn increment_load_count(
+    db: &Database,
+    id: &str,
+    loaded_by: &str,
+) -> Result<(), rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     conn.execute(
         "UPDATE sessions SET times_loaded = COALESCE(times_loaded, 0) + 1, last_loaded_by = ?1, updated_at = ?2 WHERE id = ?3",

@@ -114,25 +114,21 @@ fn parse_claude_jsonl(path: &Path) -> Result<(ClaudeSessionInfo, Vec<ImportedMes
         let json: serde_json::Value =
             serde_json::from_str(line).map_err(|e| format!("json: {} in {}", e, path.display()))?;
 
-        let msg_type = json
-            .get("type")
-            .and_then(|t| t.as_str())
-            .unwrap_or("");
+        let msg_type = json.get("type").and_then(|t| t.as_str()).unwrap_or("");
 
-        if session_id.is_empty() {
-            if let Some(sid) = json.get("sessionId").and_then(|s| s.as_str()) {
-                session_id = sid.to_string();
-            }
+        if session_id.is_empty()
+            && let Some(sid) = json.get("sessionId").and_then(|s| s.as_str())
+        {
+            session_id = sid.to_string();
         }
 
         if let Some(ts) = json
             .get("timestamp")
             .and_then(|t| t.as_str())
-            .and_then(|s| parse_iso_timestamp_opt(s))
+            .and_then(parse_iso_timestamp_opt)
+            && (created_at == 0 || ts < created_at)
         {
-            if created_at == 0 || ts < created_at {
-                created_at = ts;
-            }
+            created_at = ts;
         }
 
         match msg_type {
@@ -212,11 +208,7 @@ fn extract_user_text(json: &serde_json::Value) -> Option<String> {
     match content {
         serde_json::Value::String(s) => {
             let s = s.trim().to_string();
-            if s.is_empty() {
-                None
-            } else {
-                Some(s)
-            }
+            if s.is_empty() { None } else { Some(s) }
         }
         serde_json::Value::Array(arr) => {
             let texts: Vec<String> = arr
@@ -256,7 +248,10 @@ fn extract_assistant_text(json: &serde_json::Value) -> Option<String> {
                 return None;
             }
             if t == "tool_use" {
-                let name = item.get("name").and_then(|n| n.as_str()).unwrap_or("unknown");
+                let name = item
+                    .get("name")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("unknown");
                 let input_str = item
                     .get("input")
                     .and_then(|i| serde_json::to_string(i).ok())

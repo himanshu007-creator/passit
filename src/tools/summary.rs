@@ -1,5 +1,5 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -45,7 +45,9 @@ pub async fn summary_tool(db: &Database) -> Result<CallToolResult, ErrorData> {
             .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 
         let by_source: Vec<(String, i64)> = src_stmt
-            .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)))
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })
             .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             .filter_map(|r| r.ok())
             .collect();
@@ -106,7 +108,7 @@ pub async fn summary_tool(db: &Database) -> Result<CallToolResult, ErrorData> {
             )
             .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 
-        let rows = recent_stmt
+        recent_stmt
             .query_map([], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
@@ -118,8 +120,7 @@ pub async fn summary_tool(db: &Database) -> Result<CallToolResult, ErrorData> {
             })
             .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             .filter_map(|r| r.ok())
-            .collect::<Vec<(String, String, String, i64, i64)>>();
-        rows
+            .collect::<Vec<(String, String, String, i64, i64)>>()
     };
     if !recent_rows.is_empty() {
         out.push_str("\n  ┌─ Recent Sessions ──────────────────────────────────────┐\n");
@@ -132,12 +133,12 @@ pub async fn summary_tool(db: &Database) -> Result<CallToolResult, ErrorData> {
                 i + 1,
                 truncated,
                 short_id,
-                    msg_cnt,
-                    age
-                ));
-            }
-            out.push_str("  └──────────────────────────────────────────────────────────┘\n");
+                msg_cnt,
+                age
+            ));
         }
+        out.push_str("  └──────────────────────────────────────────────────────────┘\n");
+    }
 
     // ── recent transfers ──
     if transfer_count > 0 {

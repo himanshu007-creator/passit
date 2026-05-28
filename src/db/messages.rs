@@ -56,8 +56,14 @@ pub fn add_message(db: &Database, msg: NewMessage) -> Result<Message, rusqlite::
         .unwrap_or(-1)
         + 1;
 
-    let content_type = msg.content_type.clone().unwrap_or_else(|| "text/plain".to_string());
-    let metadata = msg.metadata.clone().unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+    let content_type = msg
+        .content_type
+        .clone()
+        .unwrap_or_else(|| "text/plain".to_string());
+    let metadata = msg
+        .metadata
+        .clone()
+        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
 
     conn.execute(
         "INSERT INTO messages (id, session_id, turn_index, role, content, content_type, agent_id, model, tokens_in, tokens_out, created_at, metadata)
@@ -95,7 +101,10 @@ pub fn add_message(db: &Database, msg: NewMessage) -> Result<Message, rusqlite::
     })
 }
 
-pub fn get_messages_by_session(db: &Database, session_id: &str) -> Result<Vec<Message>, rusqlite::Error> {
+pub fn get_messages_by_session(
+    db: &Database,
+    session_id: &str,
+) -> Result<Vec<Message>, rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     let mut stmt = conn.prepare(
         "SELECT id, session_id, turn_index, role, content, content_type, agent_id, model,
@@ -123,7 +132,11 @@ pub fn get_messages_by_session(db: &Database, session_id: &str) -> Result<Vec<Me
     rows.collect()
 }
 
-pub fn search_messages(db: &Database, query: &str, limit: u32) -> Result<Vec<SearchHit>, rusqlite::Error> {
+pub fn search_messages(
+    db: &Database,
+    query: &str,
+    limit: u32,
+) -> Result<Vec<SearchHit>, rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     let pattern = format!("%{}%", query);
     let mut stmt = conn.prepare(
@@ -157,6 +170,7 @@ pub fn get_message_count(db: &Database, session_id: &str) -> Result<i64, rusqlit
     )
 }
 
+#[allow(clippy::type_complexity)]
 pub fn copy_messages(
     db: &Database,
     source_session_id: &str,
@@ -169,7 +183,16 @@ pub fn copy_messages(
          FROM messages WHERE session_id = ?1 AND turn_index >= ?2 ORDER BY turn_index ASC",
     )?;
 
-    let messages: Vec<(String, String, String, Option<String>, Option<String>, i64, i64, String)> = stmt
+    let messages: Vec<(
+        String,
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        i64,
+        i64,
+        String,
+    )> = stmt
         .query_map(params![source_session_id, from_turn], |row| {
             Ok((
                 row.get::<_, String>(0)?,
@@ -187,7 +210,8 @@ pub fn copy_messages(
 
     let now = chrono_now();
     let mut count = 0;
-    for (role, content, content_type, agent_id, model, tokens_in, tokens_out, metadata) in &messages {
+    for (role, content, content_type, agent_id, model, tokens_in, tokens_out, metadata) in &messages
+    {
         let id = format!("msg_{}", Ulid::new());
         let next_turn: i64 = conn
             .query_row(
@@ -195,7 +219,8 @@ pub fn copy_messages(
                 params![target_session_id],
                 |r| r.get(0),
             )
-            .unwrap_or(-1) + 1;
+            .unwrap_or(-1)
+            + 1;
 
         conn.execute(
             "INSERT INTO messages (id, session_id, turn_index, role, content, content_type, agent_id, model, tokens_in, tokens_out, created_at, metadata)
@@ -227,7 +252,7 @@ pub use crate::db::sessions::chrono_now;
 mod tests {
     use super::*;
     use crate::db::database::Database;
-    use crate::db::sessions::{create_session, CreateSessionParams};
+    use crate::db::sessions::{CreateSessionParams, create_session};
 
     #[test]
     fn test_add_and_get_messages() {

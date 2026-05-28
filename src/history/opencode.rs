@@ -21,9 +21,7 @@ impl HistoryScanner for OpenCodeScanner {
     fn scan(&self) -> Result<Vec<ImportedSession>, String> {
         // OpenCode stores sessions under a data directory.
         // Try the XDG data home first, then fall back to ~/.opencode/data.
-        let data_dir = data_dir_candidates()
-            .into_iter()
-            .find(|d| d.exists());
+        let data_dir = data_dir_candidates().into_iter().find(|d| d.exists());
 
         let data_dir = match data_dir {
             Some(d) => d,
@@ -114,15 +112,11 @@ fn parse_opencode_session(path: &std::path::Path) -> Result<ImportedSession, Str
     // Messages could be inline in the session or in a separate messages directory
     let messages = if let Some(msgs) = json.get("messages").and_then(|m| m.as_array()) {
         parse_opencode_messages(msgs)?
-    } else if let Some(msg_dir_val) = json
-        .get("messageDir")
-        .or_else(|| json.get("message_dir"))
-    {
-        let msg_dir = path.parent().unwrap_or(PathBuf::new().as_path()).join(
-            msg_dir_val
-                .as_str()
-                .unwrap_or(""),
-        );
+    } else if let Some(msg_dir_val) = json.get("messageDir").or_else(|| json.get("message_dir")) {
+        let msg_dir = path
+            .parent()
+            .unwrap_or(PathBuf::new().as_path())
+            .join(msg_dir_val.as_str().unwrap_or(""));
         read_opencode_message_files(&msg_dir)?
     } else if let Some(msg_ids) = json.get("messageIds").and_then(|m| m.as_array()) {
         let parent = path.parent().unwrap_or(Path::new("."));
@@ -130,10 +124,10 @@ fn parse_opencode_session(path: &std::path::Path) -> Result<ImportedSession, Str
         for id_val in msg_ids {
             if let Some(id) = id_val.as_str() {
                 let msg_path = parent.join(format!("messages/{}.json", id));
-                if msg_path.exists() {
-                    if let Ok(m) = read_opencode_message_file(&msg_path) {
-                        messages.push(m);
-                    }
+                if msg_path.exists()
+                    && let Ok(m) = read_opencode_message_file(&msg_path)
+                {
+                    messages.push(m);
                 }
             }
         }

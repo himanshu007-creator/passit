@@ -1,5 +1,5 @@
-use rmcp::model::{CallToolResult, Content};
 use rmcp::ErrorData;
+use rmcp::model::{CallToolResult, Content};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -20,7 +20,9 @@ pub async fn export_session(
 ) -> Result<CallToolResult, ErrorData> {
     let session = get_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
-        .ok_or_else(|| ErrorData::internal_error(format!("Session not found: {}", params.session_id), None))?;
+        .ok_or_else(|| {
+            ErrorData::internal_error(format!("Session not found: {}", params.session_id), None)
+        })?;
 
     let messages = get_messages_by_session(db, &params.session_id)
         .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;

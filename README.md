@@ -5,7 +5,7 @@
   <br/>
   <img src="https://img.shields.io/github/v/release/himanshu007-creator/passit?style=flat-square" alt="Latest Release"/>
   <img src="https://img.shields.io/crates/v/passit?style=flat-square" alt="Crates.io"/>
-  <img src="https://img.shields.io/badge/Smithery-Installed-7B2FF7?style=flat-square" alt="Smithery"/>
+  <a href="https://github.com/himanshu007-creator/passit/pkgs/container/passit"><img src="https://img.shields.io/badge/Docker-ghcr.io-2496ED?style=flat-square&logo=docker" alt="Docker"/></a>
   <a href="https://github.com/himanshu007-creator/passit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/himanshu007-creator/passit/ci.yml?style=flat-square&label=CI" alt="CI"/></a>
 </p>
 
