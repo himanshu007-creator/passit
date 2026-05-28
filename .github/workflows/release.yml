@@ -162,5 +162,5 @@ jobs:
             echo "SMITHERY_API_KEY not set — skipping Smithery publish"
             exit 0
           fi
-          npx -y @smithery/cli@latest mcp publish passit.mcpb -n himanshu007-creator/passit
+          npx -y @smithery/cli@latest mcp publish passit.mcpb -n addyjeridiq/passit
 
