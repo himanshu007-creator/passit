@@ -78,20 +78,6 @@ jobs:
         with:
           files: ${{ env.artifact }}
 
-  publish-smithery:
-    name: Publish to Smithery
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Smithery CLI
-        run: npm install -g @smithery/cli
-
-      - name: Publish
-        run: smithery mcp publish ./smithery.yaml -n himanshu007-creator/passit
-        env:
-          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
-
   publish-docker:
     name: Publish Docker image
     runs-on: ubuntu-latest
