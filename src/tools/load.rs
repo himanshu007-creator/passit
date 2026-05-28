@@ -747,44 +747,6 @@ fn extract_decisions(messages: &[Message]) -> Vec<String> {
     items
 }
 
-fn extract_pending(messages: &[Message]) -> Vec<String> {
-    let mut items: Vec<String> = Vec::new();
-    let pending_indicators = [
-        "next", "remaining", "still need", "todo", "tbd",
-        "not done", "we should also", "have to", "left to do",
-        "pending", "up next", "what's left", "to finish",
-        "not yet", "in progress", "working on",
-    ];
-
-    for m in messages {
-        if m.role != "assistant" && m.role != "user" {
-            continue;
-        }
-        let lower = m.content.to_lowercase();
-        for pattern in &pending_indicators {
-            if let Some(idx) = lower.find(pattern) {
-                // Extract the sentence containing the pending item
-                let before = &m.content[..idx];
-                let sent_start = before.rfind(|c| c == '.' || c == '!' || c == '?')
-                    .map(|p| p + 1)
-                    .unwrap_or(0);
-                let after = &m.content[idx..];
-                let rel_end = after.find(|c| c == '.' || c == '!' || c == '?')
-                    .map(|p| p + 1)
-                    .unwrap_or_else(|| after.len().min(120));
-                let sentence = m.content[sent_start..idx + rel_end].trim().to_string();
-                if sentence.len() > 15 && !items.contains(&sentence) {
-                    items.push(sentence);
-                }
-                break;
-            }
-        }
-    }
-
-    items.truncate(5);
-    items
-}
-
 fn extract_files(messages: &[Message]) -> Vec<String> {
     let mut files: Vec<String> = Vec::new();
 

@@ -2,8 +2,6 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-use rusqlite::Connection;
-
 use crate::db::database::{Database, StorageConnector};
 use crate::db::sessions::chrono_now;
 
