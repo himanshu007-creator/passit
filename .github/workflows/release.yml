@@ -152,7 +152,7 @@ jobs:
           }
           JSONEOF
 
-          cd .mcpb && tar czf ../passit.mcpb .
+          cd .mcpb && zip -r ../passit.mcpb .
 
       - name: Publish to Smithery
         env:
