@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="assets/Cover.jpeg" alt="passit" width="700"/>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"/>
   <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge" alt="MIT License"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-7B2FF7?style=for-the-badge" alt="MCP"/>
@@ -161,17 +165,17 @@ passit export <session-id>
 └──────┬──────┘     └──────┬───────┘     └──────┬──────┘
        │                   │                    │
        └───────────────────┼────────────────────┘
-                           │
-                    ┌──────▼──────┐
-                    │   passit    │
-                    │  MCP Server │  ◄── SQLite
-                    │             │       ~/.passit/sessions.db
-                    └─────────────┘
-                           ▲
-                    ┌──────┴──────┐
-                    │  Scanner    │  ◄── ~/.claude/projects/
-                    │  (on boot)  │       ~/.gemini/tmp/
-                    └─────────────┘       ~/.opencode/data/
+                            │
+                     ┌──────▼──────┐
+                     │   passit    │
+                     │  MCP Server │  ◄── SQLite
+                     │             │       ~/.passit/sessions.db
+                     └─────────────┘
+                            ▲
+                     ┌──────┴──────┐
+                     │  Scanner    │  ◄── ~/.claude/projects/
+                     │  (on boot)  │       ~/.gemini/tmp/
+                     └─────────────┘       ~/.opencode/data/
 ```
 
 ## Development
