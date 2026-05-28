@@ -156,10 +156,10 @@ jobs:
 
       - name: Publish to Smithery
         env:
-          SMITHERY_KEY: ${{ secrets.SMITHERY_KEY }}
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_KEY }}
         run: |
-          if [ -z "${SMITHERY_KEY}" ]; then
-            echo "SMITHERY_KEY not set — skipping Smithery publish"
+          if [ -z "${SMITHERY_API_KEY}" ]; then
+            echo "SMITHERY_API_KEY not set — skipping Smithery publish"
             exit 0
           fi
           npx -y @smithery/cli@latest mcp publish passit.mcpb -n himanshu007-creator/passit
