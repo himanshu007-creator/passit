@@ -14,6 +14,7 @@ pub struct ImportedMessage {
     pub model: Option<String>,
     pub tokens_in: Option<i64>,
     pub tokens_out: Option<i64>,
+    #[allow(dead_code)]
     pub created_at: Option<i64>,
 }
 
@@ -25,6 +26,7 @@ pub struct ImportedSession {
     pub title: String,
     pub messages: Vec<ImportedMessage>,
     pub project_path: Option<String>,
+    #[allow(dead_code)]
     pub created_at: i64,
 }
 
@@ -45,6 +47,7 @@ pub struct ScannerResult {
 
 pub trait HistoryScanner: Send + Sync {
     fn name(&self) -> &'static str;
+    #[allow(dead_code)]
     fn display_prefix(&self) -> &'static str;
     fn detect(&self) -> bool;
     fn scan(&self) -> Result<Vec<ImportedSession>, String>;

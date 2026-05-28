@@ -38,6 +38,7 @@ impl Database {
         Ok(db)
     }
 
+    #[allow(dead_code)]
     pub fn open_in_memory() -> Result<Self, rusqlite::Error> {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
@@ -123,6 +124,7 @@ impl Database {
 }
 
 /// Storage factory: pass a file path or `":memory:"`.
+#[allow(dead_code)]
 pub fn create_storage(path: &str) -> Result<Database, rusqlite::Error> {
     if path == ":memory:" {
         Database::open_in_memory()

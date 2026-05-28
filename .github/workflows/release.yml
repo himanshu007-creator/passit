@@ -28,7 +28,6 @@ jobs:
 
   build-binaries:
     name: Build and upload binaries
-    needs: publish-cratesio
     strategy:
       fail-fast: false
       matrix:
@@ -81,7 +80,6 @@ jobs:
 
   publish-smithery:
     name: Publish to Smithery
-    needs: publish-cratesio
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -90,13 +88,12 @@ jobs:
         run: npm install -g @smithery/cli
 
       - name: Publish
-        run: smithery mcp publish ./smithery.yaml --namespace himanshu007-creator --name passit
+        run: smithery mcp publish ./smithery.yaml -n himanshu007-creator/passit
         env:
           SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
 
   publish-docker:
     name: Publish Docker image
-    needs: publish-cratesio
     runs-on: ubuntu-latest
     permissions:
       contents: read

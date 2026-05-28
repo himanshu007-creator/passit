@@ -16,6 +16,7 @@ const PASSIT_LOGO: &str = r"
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct SummaryParams {
+    #[allow(dead_code)]
     pub verbose: Option<bool>,
 }
 

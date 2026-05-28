@@ -101,6 +101,7 @@ pub fn add_fact(db: &Database, fact: NewFact) -> Result<SessionFact, rusqlite::E
     })
 }
 
+#[allow(dead_code)]
 pub fn get_facts(db: &Database, session_id: &str) -> Result<Vec<SessionFact>, rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     let mut stmt = conn.prepare(
@@ -147,6 +148,7 @@ pub fn get_facts_by_type(
     rows.collect()
 }
 
+#[allow(dead_code)]
 pub fn fact_count_by_type(
     db: &Database,
     session_id: &str,
@@ -179,6 +181,7 @@ pub fn prune_facts(
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn delete_facts(db: &Database, session_id: &str) -> Result<(), rusqlite::Error> {
     let conn = db.conn().lock().expect("poisoned lock on database");
     conn.execute("DELETE FROM session_facts WHERE session_id = ?1", params![session_id])?;

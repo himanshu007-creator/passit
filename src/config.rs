@@ -29,8 +29,11 @@ pub struct Config {
     pub agent_id: String,
     pub enable_acp: bool,
     pub acp_port: u16,
+    #[allow(dead_code)]
     pub acp_bind: String,
+    #[allow(dead_code)]
     pub log_level: String,
+    #[allow(dead_code)]
     pub max_sessions: u32,
     /// Token budget for verbatim tail of latest exchanges (Phase 2/4).
     pub verbatim_budget: usize,
