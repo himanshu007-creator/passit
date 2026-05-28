@@ -1,0 +1,23 @@
+name: passit
+description: Pass conversations between AI agents — grab, drop, and continue seamlessly
+repository: https://github.com/himanshu007-creator/passit
+author: himanshu007-creator
+icon: https://raw.githubusercontent.com/himanshu007-creator/passit/main/icon.svg
+
+build:
+  dockerfile: Dockerfile
+  architecture: linux/amd64
+
+run:
+  command: passit
+  env:
+    PASSIT_AGENT_ID: "{{agentId}}"
+  config:
+    agentId:
+      type: string
+      description: Identifier for this agent instance (e.g. claude-code, opencode)
+      default: opencode
+      x-from: user
+
+deployment:
+  type: stdio
