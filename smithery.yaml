@@ -6,18 +6,24 @@ icon: https://raw.githubusercontent.com/himanshu007-creator/passit/main/icon.svg
 
 build:
   dockerfile: Dockerfile
-  architecture: linux/amd64
+  architectures:
+    - linux/amd64
 
-run:
-  command: passit
-  env:
-    PASSIT_AGENT_ID: "{{agentId}}"
-  config:
-    agentId:
-      type: string
-      description: Identifier for this agent instance (e.g. claude-code, opencode)
-      default: opencode
-      x-from: user
-
-deployment:
+startCommand:
   type: stdio
+  configSchema:
+    type: object
+    properties:
+      agentId:
+        type: string
+        description: Identifier for this agent instance (e.g. claude-code, opencode)
+        default: opencode
+  commandFunction:
+    |-
+      (config) => ({
+        command: 'passit',
+        args: [],
+        env: {
+          PASSIT_AGENT_ID: config.agentId
+        }
+      })
