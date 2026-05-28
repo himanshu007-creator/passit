@@ -1,6 +1,6 @@
 [package]
 name = "passit"
-version = "1.0.2"
+version = "1.0.3"
 description = "pass conversations between AI agents — grab, drop, and continue seamlessly"
 license = "MIT"
 edition = "2024"
