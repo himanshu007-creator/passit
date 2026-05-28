@@ -147,6 +147,9 @@ jobs:
                     "description": "Identifier for this agent instance (e.g. claude-code, opencode)"
                   }
                 }
+              },
+              "values": {
+                "agentId": "opencode"
               }
             }
           }
